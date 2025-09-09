@@ -11,11 +11,20 @@ export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const login = () => setIsAuthenticated(true);
-  const logout = () => setIsAuthenticated(false);
+  const [userEmail, setUserEmail] = useState(null);
+
+  const login = (email) => {
+    setIsAuthenticated(true);
+    setUserEmail(email);
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setUserEmail(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, userEmail, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -28,6 +37,7 @@ const PrivateRoute = ({ children }) => {
 };
 
 // 3. --- Page Components ---
+
 function HomePage() {
   return (
     <div style={{ padding: '50px', textAlign: 'center' }}>
@@ -64,12 +74,9 @@ function ToursPage() {
   );
 }
 
-// ✅ UPDATED TourDetailPage component with Payment Step
-// ✅ UPDATED TourDetailPage component to save payment method
 function TourDetailPage() {
     const [tour, setTour] = useState(null);
     const { id } = useParams();
-    
     const [showForm, setShowForm] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [formData, setFormData] = useState({ name: '', age: '', mobile: '', email: '', numberOfPeople: 1 });
@@ -95,22 +102,14 @@ function TourDetailPage() {
         setShowPayment(true);
     };
 
-    // UPDATED: This function now accepts the chosen payment method
     const handlePayment = async (method) => {
         try {
-            // Add the payment method to the data we send to the backend
-            const bookingDetails = {
-                ...formData,
-                tourId: id,
-                tourName: tour.name,
-                paymentMethod: method // <-- ADD THIS LINE
-            };
+            const bookingDetails = { ...formData, tourId: id, tourName: tour.name, paymentMethod: method };
             const response = await axios.post("http://localhost:5000/api/book-tour", bookingDetails);
-            
             setMessage("Booking Confirmed! " + response.data.message);
             setShowPayment(false);
         } catch (error) {
-            setMessage(error.response?.data?.message || "Booking failed. Please try again.");
+            setMessage(error.response?.data?.message || "Booking failed.");
             setShowPayment(false);
         }
     };
@@ -128,7 +127,6 @@ function TourDetailPage() {
             <p>{tour.description}</p>
             
             {!showForm && !showPayment && <button onClick={() => setShowForm(true)} style={{ marginTop: '1rem' }}>Book Now</button>}
-            
             {message && <p style={{ marginTop: '1rem', fontWeight: 'bold', color: '#1abc9c' }}>{message}</p>}
 
             {showForm && (
@@ -151,7 +149,6 @@ function TourDetailPage() {
                 <div className="payment-options">
                     <h3>Choose a Payment Method</h3>
                     <p>Total Amount: ₹{(tour.price * formData.numberOfPeople).toLocaleString('en-IN')}</p>
-                    {/* UPDATED: Buttons now pass the payment method to the handler */}
                     <button onClick={() => handlePayment('Net Banking')}>Pay with Net Banking</button>
                     <button onClick={() => handlePayment('Credit Card')}>Pay with Credit Card</button>
                     <button onClick={() => handlePayment('UPI Apps')}>Pay with UPI Apps</button>
@@ -162,10 +159,77 @@ function TourDetailPage() {
     );
 }
 
+function AdminDashboardPage() {
+    const [bookings, setBookings] = useState([]);
+    const [stats, setStats] = useState({ totalUsers: 0, totalBookings: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const bookingsResponse = await axios.get("http://localhost:5000/api/all-bookings");
+                const statsResponse = await axios.get("http://localhost:5000/api/admin/stats");
+                
+                setBookings(bookingsResponse.data);
+                setStats(statsResponse.data);
+            } catch (error) {
+                console.error("Failed to fetch admin data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    if (loading) return <h2>Loading admin data...</h2>;
+
+    return (
+        <div>
+            <h2>Admin Dashboard</h2>
+            <div className="stats-container">
+                <div className="stat-card">
+                    <h3>Total Users</h3>
+                    <p>{stats.totalUsers}</p>
+                </div>
+                <div className="stat-card">
+                    <h3>Total Bookings</h3>
+                    <p>{stats.totalBookings}</p>
+                </div>
+            </div>
+
+            <h3>All Customer Bookings</h3>
+            <table className="bookings-table">
+                <thead>
+                    <tr>
+                        <th>Tour Name</th>
+                        <th>Customer Name</th>
+                        <th>Mobile No.</th>
+                        <th>Email</th>
+                        <th># People</th>
+                        <th>Payment Method</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {bookings.map(booking => (
+                        <tr key={booking._id}>
+                            <td>{booking.tourName}</td>
+                            <td>{booking.name}</td>
+                            <td>{booking.mobile}</td>
+                            <td>{booking.email}</td>
+                            <td>{booking.numberOfPeople}</td>
+                            <td>{booking.paymentMethod}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 
 // 4. --- Main App Layout and Routing ---
 function AppContent() {
-  const { isAuthenticated, logout } = useContext(AuthContext);
+  const { isAuthenticated, userEmail, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -181,16 +245,19 @@ function AppContent() {
             <>
               <li><Link to="/">Home</Link></li>
               <li><Link to="/tours">Tours</Link></li>
+              {userEmail === 'owner.com' && (
+                <li><Link to="/admin-dashboard">Admin Dashboard</Link></li>
+              )}
             </>
           )}
           {isAuthenticated ? (
             <li className="auth-links">
-              <button onClick={handleLogout} className="logout-button">Logout</button>
+                <button onClick={handleLogout} className="logout-button">Logout</button>
             </li>
           ) : (
             <>
-              <li className="auth-links"><Link to="/login">Login</Link></li>
-              <li className="auth-links"><Link to="/register">Register</Link></li>
+                <li className="auth-links"><Link to="/login">Login</Link></li>
+                <li className="auth-links"><Link to="/register">Register</Link></li>
             </>
           )}
         </ul>
@@ -202,7 +269,8 @@ function AppContent() {
           <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
           <Route path="/tours" element={<PrivateRoute><ToursPage /></PrivateRoute>} />
           <Route path="/tours/:id" element={<PrivateRoute><TourDetailPage /></PrivateRoute>} />
-          <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="/admin-dashboard" element={<PrivateRoute><AdminDashboardPage /></PrivateRoute>} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
     </div>
@@ -219,5 +287,4 @@ function App() {
     </AuthProvider>
   );
 }
-
 export default App;

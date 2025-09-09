@@ -1,15 +1,12 @@
-// src/Login.js
 import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-// IMPORTANT: Change this import path
 import { AuthContext } from "./App"; 
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
-
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -19,18 +16,13 @@ function Login() {
         email,
         password,
       });
-
       if (response.data.message === "Login successful!") {
-        login();
-        navigate("/"); // Redirect to the homepage
+        // Pass the email to the login context so the app knows who is logged in
+        login(email);
+        navigate("/");
       }
-
     } catch (error) {
-      if (error.response && error.response.data) {
-        setMessage(error.response.data.message);
-      } else {
-        setMessage("An error occurred during login.");
-      }
+      setMessage(error.response?.data?.message || "An error occurred.");
     }
   };
 
@@ -54,5 +46,4 @@ function Login() {
     </div>
   );
 }
-
 export default Login;
