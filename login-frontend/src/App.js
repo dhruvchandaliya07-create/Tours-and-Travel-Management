@@ -41,8 +41,9 @@ const PrivateRoute = ({ children }) => {
 function HomePage() {
   return (
     <div style={{ padding: '50px', textAlign: 'center' }}>
-      <h1>Welcome to Your Dashboard!</h1>
+      <h1>Welcome to Sky Line Tours and Travels!!</h1>
       <p>Your adventure starts here. Explore our exclusive tours.</p>
+      <img src='https://www.theindiatourism.com/images/tourism-india.webp' alt='Image' width={1000} img/>
     </div>
   );
 }
@@ -74,6 +75,7 @@ function ToursPage() {
   );
 }
 
+// ============== COMPONENT UPDATED ==============
 function TourDetailPage() {
     const [tour, setTour] = useState(null);
     const { id } = useParams();
@@ -81,6 +83,12 @@ function TourDetailPage() {
     const [showPayment, setShowPayment] = useState(false);
     const [formData, setFormData] = useState({ name: '', age: '', mobile: '', email: '', numberOfPeople: 1 });
     const [message, setMessage] = useState('');
+    
+    // NEW: State for the review form
+    const [showReviewForm, setShowReviewForm] = useState(false);
+    const [reviewText, setReviewText] = useState('');
+    const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
 
     useEffect(() => {
         setMessage('');
@@ -108,10 +116,21 @@ function TourDetailPage() {
             const response = await axios.post("http://localhost:5000/api/book-tour", bookingDetails);
             setMessage("Booking Confirmed! " + response.data.message);
             setShowPayment(false);
+            // NEW: Show the review form after successful booking
+            setShowReviewForm(true); 
         } catch (error) {
             setMessage(error.response?.data?.message || "Booking failed.");
             setShowPayment(false);
         }
+    };
+
+    // NEW: Handler for submitting the review
+    const handleReviewSubmit = (e) => {
+        e.preventDefault();
+        // In a real application, you would send this review to your backend.
+        console.log("Review Submitted:", reviewText);
+        setShowReviewForm(false); // Hide the review form
+        setReviewSubmitted(true); // Show the thank you message
     };
 
     if (!tour) return <h2>Loading...</h2>;
@@ -126,8 +145,10 @@ function TourDetailPage() {
             </div>
             <p>{tour.description}</p>
             
-            {!showForm && !showPayment && <button onClick={() => setShowForm(true)} style={{ marginTop: '1rem' }}>Book Now</button>}
-            {message && <p style={{ marginTop: '1rem', fontWeight: 'bold', color: '#1abc9c' }}>{message}</p>}
+            {/* The "Book Now" button will now be hidden once the booking process starts */}
+            {!showForm && !showPayment && !message && <button onClick={() => setShowForm(true)} style={{ marginTop: '1rem' }}>Book Now</button>}
+            
+            {message && !showReviewForm && <p style={{ marginTop: '1rem', fontWeight: 'bold', color: '#1abc9c' }}>{message}</p>}
 
             {showForm && (
                 <form onSubmit={handleFormSubmit} className="booking-form">
@@ -155,9 +176,35 @@ function TourDetailPage() {
                     <button type="button" className="cancel-btn" onClick={() => setShowPayment(false)}>Cancel Payment</button>
                 </div>
             )}
+
+            {/* NEW: Review form section */}
+            {showReviewForm && (
+                <form onSubmit={handleReviewSubmit} className="booking-form">
+                    <h3>Thank you for booking!</h3>
+                    <p>We would love to hear your feedback.</p>
+                    <textarea
+                        rows="5"
+                        placeholder="Write your review or expectations here..."
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        style={{ width: '100%', padding: '10px', marginTop: '10px', boxSizing: 'border-box' }}
+                        required
+                    />
+                    <button type="submit" style={{marginTop: '10px'}}>Submit Review</button>
+                </form>
+            )}
+
+            {/* NEW: Confirmation message after review is submitted */}
+            {reviewSubmitted && (
+                 <p style={{ marginTop: '1rem', fontWeight: 'bold', color: '#1abc9c' }}>
+                    Thank you for your valuable feedback! We hope you have a wonderful trip.
+                </p>
+            )}
         </div>
     );
 }
+// ============== END OF UPDATE ==============
+
 
 function AdminDashboardPage() {
     const [bookings, setBookings] = useState([]);
