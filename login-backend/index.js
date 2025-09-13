@@ -88,6 +88,19 @@ app.get("/api/all-bookings", async (req, res) => {
     }
 });
 
+// NEW: ADD THIS ROUTE TO DELETE A BOOKING
+app.delete("/api/bookings/:id", async (req, res) => {
+    try {
+        const booking = await Booking.findByIdAndDelete(req.params.id);
+        if (!booking) {
+            return res.status(404).send({ message: "Booking not found." });
+        }
+        res.send({ message: "Booking deleted successfully." });
+    } catch (error) {
+        res.status(500).send({ message: "Server error. Could not delete booking." });
+    }
+});
+
 app.get("/api/admin/stats", async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();

@@ -206,6 +206,10 @@ function TourDetailPage() {
 // ============== END OF UPDATE ==============
 
 
+// src/App.js
+
+// ... (keep all other components as they are)
+
 function AdminDashboardPage() {
     const [bookings, setBookings] = useState([]);
     const [stats, setStats] = useState({ totalUsers: 0, totalBookings: 0 });
@@ -227,6 +231,30 @@ function AdminDashboardPage() {
         };
         fetchData();
     }, []);
+
+    // NEW: Function to handle booking deletion
+    const handleDeleteBooking = async (bookingId) => {
+        // Confirm before deleting
+        if (window.confirm("Are you sure you want to delete this booking permanently?")) {
+            try {
+                // Call the new DELETE endpoint on the backend
+                await axios.delete(`http://localhost:5000/api/bookings/${bookingId}`);
+                
+                // Update the UI by removing the deleted booking from the state
+                setBookings(bookings.filter(booking => booking._id !== bookingId));
+
+                // Decrement the total bookings count in the stats card
+                setStats(prevStats => ({
+                    ...prevStats,
+                    totalBookings: prevStats.totalBookings - 1
+                }));
+
+            } catch (error) {
+                console.error("Failed to delete booking:", error);
+                alert("Error: Could not delete the booking. Please try again.");
+            }
+        }
+    };
 
     if (loading) return <h2>Loading admin data...</h2>;
 
@@ -254,6 +282,7 @@ function AdminDashboardPage() {
                         <th>Email</th>
                         <th># People</th>
                         <th>Payment Method</th>
+                        <th>Actions</th> {/* NEW: Actions column header */}
                     </tr>
                 </thead>
                 <tbody>
@@ -265,6 +294,14 @@ function AdminDashboardPage() {
                             <td>{booking.email}</td>
                             <td>{booking.numberOfPeople}</td>
                             <td>{booking.paymentMethod}</td>
+                            {/* NEW: Cell with the Delete button */}
+                            <td>
+                                <button 
+                                  onClick={() => handleDeleteBooking(booking._id)} 
+                                  className="delete-button">
+                                    Delete
+                                </button>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
@@ -272,7 +309,6 @@ function AdminDashboardPage() {
         </div>
     );
 }
-
 
 // 4. --- Main App Layout and Routing ---
 function AppContent() {
