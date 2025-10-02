@@ -328,7 +328,7 @@ function AppContent() {
             <>
               <li><Link to="/">Home</Link></li>
               <li><Link to="/tours">Tours</Link></li>
-              {userEmail === 'owner@gmail.com' && (
+              {userEmail === 'owner.com' && (
                 <li><Link to="/admin-dashboard">Admin Dashboard</Link></li>
               )}
             </>
